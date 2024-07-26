@@ -4,16 +4,19 @@ This repository is responsible holding all scripts used to start and stop the do
 
 ```
 app
-|_ api-gateway\     # Not included in this repo
-|_ csv-merger-api\  # Not included in this repo
-|_ web-portfolio\   # Not included in this repo
-|_ site-reliability-tools\  # Not included in this repo
-|_ makefile
-|_ start-apps.sh
+|_ api-gateway/     # Not included in this repo
+|_ csv-merger-api/  # Not included in this repo
+|_ web-portfolio/   # Not included in this repo
+|_ site-reliability-tools/  # Not included in this repo
+|_ app-scripts/
+    |_ start-apps.sh
+    |_ makefile
 ```
 
-
 ## Using a DinD (Docker in Docker) mock server
+
+### Note
+Dockerfile, makefile, docker-compose.yml and .dockerignore should be move to the parent folder of all 5 repos if you'd like to use the mock server
 
 ```shell
 # Start container

@@ -5,7 +5,7 @@ build-server:
 run-server:
 	docker-compose up -d
 	sleep 3
-	docker exec -it $$(docker ps -qf "name=mock-server") /bin/bash /srv/app/start-apps.local.sh
+	docker exec -it $$(docker ps -qf "name=mock-server") /bin/bash /srv/app/app-scripts/start-apps.local.sh
 
 start-server: run-server
 
