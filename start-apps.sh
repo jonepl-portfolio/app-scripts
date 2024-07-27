@@ -89,44 +89,35 @@ start_services() {
     echo "Deploying Services"
     mkdir -p $VHOST_DIR
 
-    # Load environment variables and deploy csv merger api
+    # Load environment variables and deploy CSV Merger API
     export $(grep -v '^#' $APP_WORKING_DIR/csv-merger-api/.env | xargs)
     docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml hosted-apps
 
-    # Load environment variables and deploy web portfolio
+    # Load environment variables and deploy Web Portfolio
     export $(grep -v '^#' $APP_WORKING_DIR/web-portfolio/.env | xargs)
     docker stack deploy -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
 
-    # Deploy Certbot and Portainer
-    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.yml -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
+    # Deploy Portainer
+    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
 
-    # Load environment variables and deploy api gateway
+    # Load environment variables and deploy API Gateway
     export $(grep -v '^#' $APP_WORKING_DIR/api-gateway/.env | xargs)
     docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
+
+    # Wait for API Gateway to be started before deploying Certbot
+    wait_for_api_gateway
+    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.yml sre-tools
 }
 
-wait_for_certbot() {
-    local retries=15
-    local count=0
-    local sleep_time=5
+wait_for_api_gateway() {
+    echo "Waiting for API gateway to be up..."
 
-    echo "Waiting for Certbot container to be ready..."
-
-    while [ $count -lt $retries ]; do
-        CERTBOT_CONTAINER_ID=$(docker ps -qf "name=certbot")
-
-        if [ -n "$CERTBOT_CONTAINER_ID" ]; then
-            echo "Certbot container is running with ID: $CERTBOT_CONTAINER_ID"
-            return 0
-        else
-            echo "Certbot container is not ready yet. Waiting for $sleep_time seconds..."
-            sleep $sleep_time
-            count=$((count + 1))
-        fi
+    while ! curl -s --head  --request GET "$DOMAIN" | grep "301 Moved Permanently" > /dev/null; do
+        echo "API gateway is not up yet. Waiting..."
+        sleep 10
     done
 
-    echo "Certbot container did not become ready after $((retries * sleep_time)) seconds."
-    return 1
+    echo "API gateway is up. Proceeding with Certbot script."
 }
 
 echo "Starting apps..."
@@ -143,13 +134,6 @@ create_config
 create_volume
 
 start_services
-
-# Wait for Certbot container to be ready before copying certificates
-if wait_for_certbot; then
-    copy_certs
-else
-    echo "Failed to copy certificates because Certbot container is not ready."
-fi
 
 cd $CURRENT_DIR
 echo "Finished running script!"
