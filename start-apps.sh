@@ -98,7 +98,7 @@ start_services() {
     docker stack deploy -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
 
     # Deploy Certbot and Portainer
-    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.local.yml -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
+    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.yml -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
 
     # Load environment variables and deploy api gateway
     export $(grep -v '^#' $APP_WORKING_DIR/api-gateway/.env | xargs)
