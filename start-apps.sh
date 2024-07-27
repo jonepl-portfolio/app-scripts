@@ -1,14 +1,15 @@
 #!/bin/bash
-WORKING_DIR="/srv/app"
+APP_WORKING_DIR="/srv/app"
+VHOST_DIR="$APP_WORKING_DIR/api-gateway/vhost.d"
+ENV_CONFIG="$APP_WORKING_DIR/app-scripts/.env"
 CURRENT_DIR=$(pwd)
-$VHOST_DIR="$WORKING_DIR/api-gateway/vhost.d"
 
 # Initial environment variables from .env file
 initialize_env_vars() {
     if [ -e $ENV_CONFIG ]; then
         echo "Setting environment variables for $ENV_CONFIG file"
         set -o allexport
-        . .env
+        . $ENV_CONFIG
         set +o allexport
 
         # Check for required variables
@@ -37,9 +38,9 @@ initialize_swarm() {
     fi
 }
 
-
 # Create Docker Swarm network
 create_network() {
+    # Create reverse proxy network
     if ! docker network ls | grep -q "portfolio-network"; then
         echo "Creating Docker overlay network 'portfolio-network'..."
         docker network create --driver overlay --attachable portfolio-network
@@ -50,7 +51,7 @@ create_network() {
     # Create Portainer Agent network
     if ! docker network ls | grep -q "agent-network"; then
         echo "Creating Docker overlay network 'agent-network'..."
-        docker network create --driver overlay --attachment agent-network
+        docker network create --driver overlay --attachable agent-network
     else
         echo "Docker overlay network 'agent-network' already exists."
     fi
@@ -87,9 +88,21 @@ create_volume() {
 start_services() {
     echo "Deploying Services"
     mkdir -p $VHOST_DIR
-    docker stack deploy -c csv-merger-api/docker-compose.yml -c web-portfolio/docker-compose.yml hosted-apps
-    docker stack deploy -c site-reliability-tools/security/docker-compose.yml -c site-reliability-tools/maintenance/docker-compose.yml sre-tools
-    docker stack deploy -c api-gateway/docker-compose.yml hosted-apps
+
+    # Load environment variables and deploy csv merger api
+    export $(grep -v '^#' $APP_WORKING_DIR/csv-merger-api/.env | xargs)
+    docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml hosted-apps
+
+    # Load environment variables and deploy web portfolio
+    export $(grep -v '^#' $APP_WORKING_DIR/web-portfolio/.env | xargs)
+    docker stack deploy -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
+
+    # Deploy Certbot and Portainer
+    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.local.yml -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
+
+    # Load environment variables and deploy api gateway
+    export $(grep -v '^#' $APP_WORKING_DIR/api-gateway/.env | xargs)
+    docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
 }
 
 wait_for_certbot() {
@@ -117,7 +130,7 @@ wait_for_certbot() {
 }
 
 echo "Starting apps..."
-cd $WORKING_DIR
+cd $APP_WORKING_DIR
 
 initialize_env_vars
 
@@ -130,6 +143,13 @@ create_config
 create_volume
 
 start_services
+
+# Wait for Certbot container to be ready before copying certificates
+if wait_for_certbot; then
+    copy_certs
+else
+    echo "Failed to copy certificates because Certbot container is not ready."
+fi
 
 cd $CURRENT_DIR
 echo "Finished running script!"
