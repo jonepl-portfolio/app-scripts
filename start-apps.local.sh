@@ -146,6 +146,10 @@ copy_certs() {
     echo "Certificates copied successfully."
 }
 
+create_secret() {
+    docker secret create app_config $ENV_CONFIG
+}
+
 echo "Starting apps..."
 cd $APP_WORKING_DIR
 
@@ -156,6 +160,8 @@ initialize_swarm
 create_network
 
 create_volume
+
+create_secret
 
 start_services
 

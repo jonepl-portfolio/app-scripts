@@ -120,6 +120,10 @@ wait_for_api_gateway() {
     echo "API gateway is up. Proceeding with Certbot script."
 }
 
+create_secret() {
+    docker secret create app_config $ENV_CONFIG
+}
+
 echo "Starting apps..."
 cd $APP_WORKING_DIR
 
@@ -132,6 +136,8 @@ create_network
 create_config
 
 create_volume
+
+create_secret
 
 start_services
 
