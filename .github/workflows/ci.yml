@@ -38,3 +38,4 @@ jobs:
         run: |
           ssh-keyscan -t ed25519 ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hostsz
           scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 start-apps.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/srv/app/app-scripts/start-apps.sh
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 makefile ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/srv/app/app-scripts/makefile

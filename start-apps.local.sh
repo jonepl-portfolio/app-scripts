@@ -61,7 +61,6 @@ create_network() {
     fi
 }
 
-
 # Create volumes
 create_volume() {
     if ! docker volume ls | grep -q "nginx_certs"; then
