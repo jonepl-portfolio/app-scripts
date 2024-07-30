@@ -84,19 +84,13 @@ start_services() {
     echo "Deploying Services"
     mkdir -p $VHOST_DIR
 
-    # Load environment variables and deploy csv merger api
-    export $(grep -v '^#' $APP_WORKING_DIR/csv-merger-api/.env | xargs)
-    docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml hosted-apps
-    
-    # Load environment variables and deploy web portfolio
-    export $(grep -v '^#' $APP_WORKING_DIR/web-portfolio/.env | xargs)
-    docker stack deploy -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
+    # Deploy CSV merger API and web portfolio
+    docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
 
     # Deploy Certbot and Portainer
     docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.local.yml -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
 
-    # Load environment variables and deploy api gateway
-    export $(grep -v '^#' $APP_WORKING_DIR/api-gateway/.env | xargs)
+    # Deploy API gateway
     docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
 }
 
