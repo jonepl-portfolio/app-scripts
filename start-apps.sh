@@ -90,18 +90,12 @@ start_services() {
     mkdir -p $VHOST_DIR
 
     # Load environment variables and deploy CSV Merger API
-    export $(grep -v '^#' $APP_WORKING_DIR/csv-merger-api/.env | xargs)
-    docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml hosted-apps
-
-    # Load environment variables and deploy Web Portfolio
-    export $(grep -v '^#' $APP_WORKING_DIR/web-portfolio/.env | xargs)
-    docker stack deploy -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
+    docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
 
     # Deploy Portainer
     docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
 
     # Load environment variables and deploy API Gateway
-    export $(grep -v '^#' $APP_WORKING_DIR/api-gateway/.env | xargs)
     docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
 
     # Wait for API Gateway to be started before deploying Certbot
