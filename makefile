@@ -15,11 +15,11 @@ stop-server:
 destroy-server: stop-server
 
 ssh-server:
-	docker exec -it mock-server sh
+	docker exec -it mock-server bash
 
 remove-swarm:
 	$(MAKE) remove-services
-	$(MAKE) remove-config
+	$(MAKE) remove-secret
 	$(MAKE) remove-network
 	$(MAKE) remove-volume
 	$(MAKE) leave-swarm
@@ -32,27 +32,27 @@ remove-network:
 		echo "Network 'portfolio-network' does not exist."; \
 	fi
 
-remove-config:
-	@if [ -n "$$(docker config ls -f name=gateway-config --format '{{.ID}}')" ]; then \
-		echo "Removing existing config: gateway-config..."; \
-		docker config rm $$(docker config ls -f name=gateway-config --format '{{.ID}}'); \
-	else \
-		echo "Config 'gateway-config' does not exist."; \
-	fi
-
 remove-volume:
-	@if [ -n "$$(docker volume ls -f name=nginx_certs --format '{{.ID}}')" ]; then \
-		echo "Removing existing config: nginx_certs..."; \
-		docker config rm $$(docker config ls -f name=nginx_certs --format '{{.ID}}'); \
+	@if [ -n "$$(docker volume ls -f name=nginx_certs --format '{{.Name}}')" ]; then \
+		echo "Removing existing volume: nginx_certs..."; \
+		docker volume rm $$(docker volume ls -f name=nginx_certs --format '{{.Name}}'); \
 	else \
-		echo "Config 'nginx_certs' does not exist."; \
+		echo "Volume 'nginx_certs' does not exist."; \
 	fi
 
-	@if [ -n "$$(docker volume ls -f name=certbot_config --format '{{.ID}}')" ]; then \
-		echo "Removing existing config: certbot_config..."; \
-		docker config rm $$(docker config ls -f name=certbot_config --format '{{.ID}}'); \
+	@if [ -n "$$(docker volume ls -f name=certbot_config --format '{{.Name}}')" ]; then \
+		echo "Removing existing volume: certbot_config..."; \
+		docker volume rm $$(docker volume ls -f name=certbot_config --format '{{.Name}}'); \
 	else \
-		echo "Config 'certbot_config' does not exist."; \
+		echo "Volume 'certbot_config' does not exist."; \
+	fi
+
+remove-secret:
+	@if [ -n "$$(docker secret ls -f name=app_config --format '{{.ID}}')" ]; then \
+		echo "Removing existing secret: app_config..."; \
+		docker secret rm $$(docker secret ls -f name=app_config --format '{{.ID}}'); \
+	else \
+		echo "Secret 'app_config' does not exist."; \
 	fi
 
 remove-api-gateway:
@@ -74,4 +74,3 @@ remove-services:
 
 leave-swarm:
 	docker swarm leave -f
-

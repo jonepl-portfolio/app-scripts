@@ -57,17 +57,7 @@ create_network() {
     fi
 }
 
-# Create gateway config
-create_config() {
-    if ! docker config ls | grep -q "gateway-config"; then
-        echo "Creating Docker Swarm config 'gateway-config'..."
-        docker config create gateway-config api-gateway/.env
-    else
-        echo "Docker Swarm config 'gateway-config' already exists."
-    fi
-}
-
-# Create gateway config
+# Create volumes
 create_volume() {
     if ! docker volume ls | grep -q "nginx_certs"; then
         echo "Creating Docker Swarm volume 'nginx_certs'..."
@@ -99,6 +89,7 @@ start_services() {
     docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
 
     # Wait for API Gateway to be started before deploying Certbot
+    # NOTE: This is done to prevent failures when new domains are added
     wait_for_api_gateway
     docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.yml sre-tools
 }
