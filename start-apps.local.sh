@@ -6,10 +6,17 @@ ENV_CONFIG="$APP_SCRIPT_DIR/.env"
 PROJECT_DIR="$(dirname $(pwd))"
 CURRENT_DIR=$(pwd)
 
+
+log_message() {
+    local level="$1"
+    local message="$2"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $message"
+}
+
 # Initial environment variables from .env file
 initialize_env_vars() {
     if [ -e $ENV_CONFIG ]; then
-        echo "Setting environment variables for $ENV_CONFIG file"
+        log_message "INFO" "Setting environment variables for $ENV_CONFIG file"
         set -o allexport
         . $ENV_CONFIG
         set +o allexport
@@ -23,9 +30,9 @@ initialize_env_vars() {
             fi
         done
 
-        echo "All required variables are set."
+        log_message "INFO" "All required variables are set."
     else
-        echo "No $ENV_CONFIG found."
+        log_message "ERROR" "No $ENV_CONFIG found."
         exit 1
     fi
 }
@@ -33,10 +40,10 @@ initialize_env_vars() {
 # Initialize Swarm
 initialize_swarm() {
     if ! docker info | grep -q "Swarm: active"; then
-        echo "Docker Swarm is not initialized. Initializing now..."
+        log_message "INFO" "Docker Swarm is not initialized. Initializing now..."
         docker swarm init
     else
-        echo "Docker Swarm is already initialized."
+        log_message "INFO" "Docker Swarm is already initialized."
     fi
 }
 
@@ -44,43 +51,36 @@ initialize_swarm() {
 create_network() {
     # Create reverse proxy network
     if ! docker network ls | grep -q "portfolio-network"; then
-        echo "Creating Docker overlay network 'portfolio-network'..."
+        log_message "INFO" "Creating Docker overlay network 'portfolio-network'..."
         docker network create --driver overlay portfolio-network
         # docker network create --driver overlay --attachable portfolio-network
     else
-        echo "Docker overlay network 'portfolio-network' already exists."
+        log_message "INFO" "Docker overlay network 'portfolio-network' already exists."
     fi
 
     # Create Portainer Agent network
     if ! docker network ls | grep -q "agent-network"; then
-        echo "Creating Docker overlay network 'agent-network'..."
+        log_message "INFO" "Creating Docker overlay network 'agent-network'..."
         docker network create --driver overlay agent-network
         # docker network create --driver overlay --attachable agent-network
     else
-        echo "Docker overlay network 'agent-network' already exists."
+        log_message "INFO" "Docker overlay network 'agent-network' already exists."
     fi
 }
 
 # Create volumes
 create_volume() {
-    if ! docker volume ls | grep -q "nginx_certs"; then
-        echo "Creating Docker Swarm volume 'nginx_certs'..."
-        docker volume create nginx_certs
-    else
-        echo "Docker Swarm volume 'nginx_certs' already exists."
-    fi
-
     if ! docker volume ls | grep -q "certbot_config"; then
-        echo "Creating Docker Swarm volume 'certbot_config'..."
+        log_message "INFO" "Creating Docker Swarm volume 'certbot_config'..."
         docker volume create certbot_config
     else
-        echo "Docker Swarm volume 'certbot_config' already exists."
+        log_message "INFO" "Docker Swarm volume 'certbot_config' already exists."
     fi
 }
 
 # Start services
 start_services() {
-    echo "Deploying Services"
+    log_message "INFO" "Deploying Services"
     mkdir -p $VHOST_DIR
 
     # Deploy CSV merger API and web portfolio
@@ -98,28 +98,28 @@ wait_for_certbot() {
     local count=0
     local sleep_time=5
 
-    echo "Waiting for Certbot container to be ready..."
+    log_message "INFO" "Waiting for Certbot container to be ready..."
 
     while [ $count -lt $retries ]; do
         CERTBOT_CONTAINER_ID=$(docker ps -qf "name=certbot")
 
         if [ -n "$CERTBOT_CONTAINER_ID" ]; then
-            echo "Certbot container is running with ID: $CERTBOT_CONTAINER_ID"
+            log_message "INFO" "Certbot container is running with ID: $CERTBOT_CONTAINER_ID"
             return 0
         else
-            echo "Certbot container is not ready yet. Waiting for $sleep_time seconds..."
+            log_message "INFO" "Certbot container is not ready yet. Waiting for $sleep_time seconds..."
             sleep $sleep_time
             count=$((count + 1))
         fi
     done
 
-    echo "Certbot container did not become ready after $((retries * sleep_time)) seconds."
+    log_message "INFO" "Certbot container did not become ready after $((retries * sleep_time)) seconds."
     return 1
 }
 
 # Copy certificates from Certbot to DinD container
 copy_certs() {
-    echo "Copying certificates from Certbot container to mock server (DinD) container..."
+    log_message "INFO" "Copying certificates from Certbot container to mock server (DinD) container..."
 
     # Get the Certbot container ID
     CERTBOT_CONTAINER_ID=$(docker ps -qf "name=certbot")
@@ -136,7 +136,7 @@ copy_certs() {
     docker cp $CERTBOT_CONTAINER_ID:$SELF_SIGNED_CERT_PATH/$LOCAL_CERT $DEST_PATH/$LOCAL_CERT
     docker cp $CERTBOT_CONTAINER_ID:$SELF_SIGNED_CERT_PATH/$LOCAL_CERT_KEY $DEST_PATH/$LOCAL_CERT_KEY
 
-    echo "Certificates copied successfully."
+    log_message "INFO" "Certificates copied successfully."
 }
 
 create_secret() {
@@ -162,8 +162,8 @@ start_services
 if wait_for_certbot; then
     copy_certs
 else
-    echo "Failed to copy certificates because Certbot container is not ready."
+    log_message "ERROR" "Failed to copy certificates because Certbot container is not ready."
 fi
 
 cd $CURRENT_DIR
-echo "Finished running script!"
+log_message "INFO" "Finished running script!"

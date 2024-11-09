@@ -34,7 +34,7 @@ jobs:
       - name: Check SSH connection
         run: ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} 'echo "SSH connection successful"'
 
-      - name: Copy Docker Compose file to remote server
+      - name: Copy Application scripts to remote server
         run: |
           ssh-keyscan -t ed25519 ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hostsz
           scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 start-apps.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/srv/app/app-scripts/start-apps.sh

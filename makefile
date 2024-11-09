@@ -17,6 +17,7 @@ destroy-server: stop-server
 ssh-server:
 	docker exec -it mock-server bash
 
+# Internal Server Commands
 remove-swarm:
 	$(MAKE) remove-services
 	$(MAKE) remove-secret
@@ -33,13 +34,6 @@ remove-network:
 	fi
 
 remove-volume:
-	@if [ -n "$$(docker volume ls -f name=nginx_certs --format '{{.Name}}')" ]; then \
-		echo "Removing existing volume: nginx_certs..."; \
-		docker volume rm $$(docker volume ls -f name=nginx_certs --format '{{.Name}}'); \
-	else \
-		echo "Volume 'nginx_certs' does not exist."; \
-	fi
-
 	@if [ -n "$$(docker volume ls -f name=certbot_config --format '{{.Name}}')" ]; then \
 		echo "Removing existing volume: certbot_config..."; \
 		docker volume rm $$(docker volume ls -f name=certbot_config --format '{{.Name}}'); \
