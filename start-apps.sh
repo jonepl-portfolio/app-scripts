@@ -75,21 +75,23 @@ create_volume() {
 
 # Start services
 start_services() {
-    log_message "INFO" "Deploying Services"
+    log_message "INFO" "Starting Services..."
     mkdir -p $VHOST_DIR
 
-    # Load environment variables and deploy CSV Merger API
+    log_message "INFO" "Deploying CSV merger API and web portfolio to hosted-apps stack..."
     docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
 
-    # Deploy Portainer
+    log_message "INFO" "Deploying Certbot and Portainer to sre-tools stack..."
     docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
 
-    # Load environment variables and deploy API Gateway
+    log_message "INFO" "Deploying API gateway to hosted-apps stack..."
     docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
 
     # Wait for API Gateway to be started before deploying Certbot
     # NOTE: This is done to prevent failures when new domains are added
     wait_for_api_gateway
+
+    log_message "INFO" "Deploying Certbot to sre-tools stack..."
     docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.yml sre-tools
 }
 
