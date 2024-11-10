@@ -3,14 +3,13 @@ name: CI
 on:
   push:
     branches:
-      - '**'
       - main
   pull_request:
     branches:
       - main
 
 jobs:
-  deploy-docker-compose:
+  deploy-scripts:
     name: Deploy App Scripts
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -36,6 +35,7 @@ jobs:
 
       - name: Copy Application scripts to remote server
         run: |
-          ssh-keyscan -t ed25519 ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hostsz
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 start-apps.sh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/srv/app/app-scripts/start-apps.sh
-          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 makefile ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/srv/app/app-scripts/makefile
+          ssh-keyscan -t ed25519 ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          for file in init-swarm.sh remove-swarm.sh update-hosted-apps.sh; do
+            scp -o StrictHostKeyChecking=no $file ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/srv/app/app-scripts
+          done
