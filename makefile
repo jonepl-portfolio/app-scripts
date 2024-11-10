@@ -5,7 +5,7 @@ build-server:
 run-server:
 	docker-compose up -d
 	sleep 3
-	docker exec -it $$(docker ps -qf "name=mock-server") /bin/bash /srv/app/app-scripts/start-apps.local.sh
+	docker exec -it $$(docker ps -qf "name=mock-server") /bin/bash /srv/app/app-scripts/init-swarm.local.sh
 
 start-server: run-server
 
@@ -22,8 +22,8 @@ remove-swarm:
 	$(MAKE) remove-services
 	$(MAKE) remove-secret
 	$(MAKE) remove-network
-	$(MAKE) remove-volume
 	$(MAKE) leave-swarm
+	$(MAKE) remove-volume
 
 remove-network:
 	@if [ -n "$$(docker network ls -f name=portfolio-network --format '{{.ID}}')" ]; then \

@@ -9,7 +9,9 @@ app
 |_ web-portfolio/   # Not included in this repo
 |_ site-reliability-tools/  # Not included in this repo
 |_ app-scripts/
-    |_ start-apps.sh
+    |_ init-swarm.sh
+    |_ remove-swarm.sh
+    |_ update-hosted-apps.sh
     |_ makefile
 ```
 
@@ -37,7 +39,7 @@ $ make ssh-server
 ```
 
 Debugging services
-1. Update start-apps.sh so that the network allows services to attach to it.
+1. Update init-swarm.sh so that the network allows services to attach to it.
 2. Run and attach a dummy service to check if other services are reachable through the network with the following commands
 
 ```shell
