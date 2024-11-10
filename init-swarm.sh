@@ -75,7 +75,7 @@ create_volume() {
 
 # Start services
 start_services() {
-    log_message "INFO" "Starting Services..."
+    log_message "INFO" "Deploying Services..."
     mkdir -p $VHOST_DIR
 
     log_message "INFO" "Deploying CSV merger API and web portfolio to hosted-apps stack..."
