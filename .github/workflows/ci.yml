@@ -36,6 +36,6 @@ jobs:
       - name: Copy Application scripts to remote server
         run: |
           ssh-keyscan -t ed25519 ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
-          for file in init-swarm.sh remove-swarm.sh update-hosted-apps.sh; do
+          for file in init-swarm.sh remove-swarm.sh update-hosted-apps.sh refresh-secret.sh; do
             scp -o StrictHostKeyChecking=no $file ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/srv/app/app-scripts
           done

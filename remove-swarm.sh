@@ -1,0 +1,1 @@
+# Convert Makefile into shell script
