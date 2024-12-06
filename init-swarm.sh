@@ -2,6 +2,9 @@
 APP_WORKING_DIR="/srv/app"
 VHOST_DIR="$APP_WORKING_DIR/api-gateway/vhost.d"
 ENV_CONFIG="$APP_WORKING_DIR/app-scripts/.env"
+MAIL_SERVER_SERVICE_CONFIG="$APP_WORKING_DIR/app-scripts/portfolio/.env.config"
+MAIL_SERVER_SERVICE_SECRET="$APP_WORKING_DIR/app-scripts/portfolio/.env.secret"
+
 CURRENT_DIR=$(pwd)
 
 log_message() {
@@ -107,7 +110,16 @@ wait_for_api_gateway() {
 }
 
 create_secret() {
+    log_message "INFO" "Creating Docker secret 'app_config'..."
     docker secret create app_config $ENV_CONFIG
+
+    log_message "INFO" "Creating Docker secret 'mail_server_secret'..."
+    docker secret create mail_server_secret $MAIL_SERVER_SERVICE_SECRET
+}
+
+create_config() {
+    log_message "INFO" "Creating Docker config 'mail_server_config'..."
+    docker config create mail_server_config $MAIL_SERVER_SERVICE_SECRET
 }
 
 log_message "INFO" "Starting apps..."
@@ -122,6 +134,8 @@ create_network
 create_volume
 
 create_secret
+
+create_config
 
 start_services
 
