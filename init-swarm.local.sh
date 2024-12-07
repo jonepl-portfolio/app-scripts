@@ -1,11 +1,13 @@
 #!/bin/bash
 APP_WORKING_DIR="/srv/app"
 VHOST_DIR="$APP_WORKING_DIR/api-gateway/vhost.d"
-APP_SCRIPT_DIR="$APP_WORKING_DIR/app-scripts"
-ENV_CONFIG="$APP_SCRIPT_DIR/.env"
-PROJECT_DIR="$(dirname $(pwd))"
-CURRENT_DIR=$(pwd)
 
+SHARED_SECRET_PATH="$APP_WORKING_DIR/app-scripts/.env.secret"
+MAIL_SERVER_DIR="$APP_WORKING_DIR/web-portfolio/mail-server"
+MAIL_SERVER_CONFIG_PATH="$MAIL_SERVER_DIR/.env.config"
+MAIL_SERVER_SECRET_PATH="$MAIL_SERVER_DIR/.env.secret"
+
+CURRENT_DIR=$(pwd)
 
 log_message() {
     local level="$1"
@@ -13,26 +15,26 @@ log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $message"
 }
 
-# Initial environment variables from .env file
+# Initial environment variables from .env.secret file
 initialize_env_vars() {
-    if [ -e $ENV_CONFIG ]; then
-        log_message "INFO" "Setting environment variables for $ENV_CONFIG file"
+    if [ -e $SHARED_SECRET_PATH ]; then
+        log_message "INFO" "Setting environment variables for $SHARED_SECRET_PATH file"
         set -o allexport
-        . $ENV_CONFIG
+        . $SHARED_SECRET_PATH
         set +o allexport
 
         # Check for required variables
         REQUIRED_VARS=(DOMAIN)
         for VAR in "${REQUIRED_VARS[@]}"; do
             if [ -z "${!VAR}" ]; then
-                echo "Error: $VAR is not set in $ENV_CONFIG"
+                echo "Error: $VAR is not set in $SHARED_SECRET_PATH"
                 exit 1
             fi
         done
 
         log_message "INFO" "All required variables are set."
     else
-        log_message "ERROR" "No $ENV_CONFIG found."
+        log_message "ERROR" "No $SHARED_SECRET_PATH found."
         exit 1
     fi
 }
@@ -76,21 +78,6 @@ create_volume() {
     else
         log_message "INFO" "Docker Swarm volume 'certbot_config' already exists."
     fi
-}
-
-# Start services
-start_services() {
-    log_message "INFO" "Deploying Services ..."
-    mkdir -p $VHOST_DIR
-
-    # Deploy CSV merger API and web portfolio
-    docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
-
-    # Deploy Certbot and Portainer
-    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.local.yml -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
-
-    # Deploy API gateway
-    docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
 }
 
 wait_for_certbot() {
@@ -139,11 +126,60 @@ copy_certs() {
     log_message "INFO" "Certificates copied successfully."
 }
 
-create_secret() {
-    docker secret create app_config $ENV_CONFIG
+# Start services
+start_services() {
+    log_message "INFO" "Deploying Services ..."
+    mkdir -p $VHOST_DIR
+
+    # Deploy CSV merger API and web portfolio
+    log_message "INFO" "Deploying CSV merger API and web portfolio to hosted-apps stack..."
+    docker stack deploy -c $APP_WORKING_DIR/csv-merger-api/docker-compose.yml -c $APP_WORKING_DIR/web-portfolio/docker-compose.yml hosted-apps
+
+    # Deploy Certbot and Portainer
+    log_message "INFO" "Deploying Certbot and Portainer to sre-tools stack..."
+    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/maintenance/docker-compose.yml sre-tools
+
+    # Deploy API gateway
+    log_message "INFO" "Deploying API gateway to hosted-apps stack..."
+    docker stack deploy -c $APP_WORKING_DIR/api-gateway/docker-compose.yml hosted-apps
+
+    # Wait for Certbot container to be ready before copying certificates
+    if wait_for_certbot; then
+        copy_certs
+    else
+        log_message "ERROR" "Failed to copy certificates because Certbot container is not ready."
+    fi
+
+    log_message "INFO" "Deploying Certbot to sre-tools stack..."
+    docker stack deploy -c $APP_WORKING_DIR/site-reliability-tools/security/docker-compose.local.yml sre-tools
 }
 
-echo "Starting apps..."
+create_secret() {
+    if ! docker secret ls | grep -q "shared_secret"; then
+        log_message "INFO" "Creating Docker secret 'shared_secret'..."
+        docker secret create shared_secret $SHARED_SECRET_PATH
+    else
+        log_message "INFO" "Docker secret 'shared_secret' already exists."
+    fi
+
+    if ! docker secret ls | grep -q "mail_server_secret"; then
+        log_message "INFO" "Creating Docker secret 'mail_server_secret'..."
+        docker secret create mail_server_secret $MAIL_SERVER_SECRET_PATH
+    else
+        log_message "INFO" "Docker secret 'mail_server_secret' already exists."
+    fi
+}
+
+create_config() {
+    if ! docker config ls | grep -q "mail_server_config"; then
+        log_message "INFO" "Creating Docker config 'mail_server_config'..."
+        docker config create mail_server_config $MAIL_SERVER_CONFIG_PATH
+    else
+        log_message "INFO" "Docker config 'mail_server_config' already exists."
+    fi
+}
+
+log_message "INFO" "Starting apps..."
 cd $APP_WORKING_DIR
 
 initialize_env_vars
@@ -156,14 +192,9 @@ create_volume
 
 create_secret
 
-start_services
+create_config
 
-# Wait for Certbot container to be ready before copying certificates
-if wait_for_certbot; then
-    copy_certs
-else
-    log_message "ERROR" "Failed to copy certificates because Certbot container is not ready."
-fi
+start_services
 
 cd $CURRENT_DIR
 log_message "INFO" "Finished running script!"
