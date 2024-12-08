@@ -4,8 +4,8 @@ VHOST_DIR="$APP_WORKING_DIR/api-gateway/vhost.d"
 
 SHARED_SECRET_PATH="$APP_WORKING_DIR/app-scripts/.env.secret"
 MAIL_SERVER_DIR="$APP_WORKING_DIR/web-portfolio/mail-server"
-MAIL_SERVER_CONFIG_PATH="$MAIL_SERVER_DIR/.env.config"
-MAIL_SERVER_SECRET_PATH="$MAIL_SERVER_DIR/.env.secret"
+MAIL_SERVER_CONFIG_PATH="$MAIL_SERVER_DIR/.env.config.example"
+MAIL_SERVER_SECRET_PATH="$MAIL_SERVER_DIR/.env.secret.example"
 
 CURRENT_DIR=$(pwd)
 
