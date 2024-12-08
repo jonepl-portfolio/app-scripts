@@ -1,9 +1,11 @@
 #!/bin/bash
 APP_WORKING_DIR="/srv/app"
 VHOST_DIR="$APP_WORKING_DIR/api-gateway/vhost.d"
-ENV_CONFIG="$APP_WORKING_DIR/app-scripts/.env"
-MAIL_SERVER_SERVICE_CONFIG="$APP_WORKING_DIR/app-scripts/portfolio/.env.config"
-MAIL_SERVER_SERVICE_SECRET="$APP_WORKING_DIR/app-scripts/portfolio/.env.secret"
+
+SHARED_SECRET_PATH="$APP_WORKING_DIR/app-scripts/.env.secret"
+MAIL_SERVER_DIR="$APP_WORKING_DIR/web-portfolio/mail-server"
+MAIL_SERVER_CONFIG_PATH="$MAIL_SERVER_DIR/.env.config"
+MAIL_SERVER_SECRET_PATH="$MAIL_SERVER_DIR/.env.secret"
 
 CURRENT_DIR=$(pwd)
 
@@ -13,26 +15,26 @@ log_message() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $message"
 }
 
-# Initial environment variables from .env file
+# Initial environment variables from .env.secret file
 initialize_env_vars() {
-    if [ -e $ENV_CONFIG ]; then
-        log_message "INFO" "Setting environment variables for $ENV_CONFIG file"
+    if [ -e $SHARED_SECRET_PATH ]; then
+        log_message "INFO" "Setting environment variables for $SHARED_SECRET_PATH file"
         set -o allexport
-        . $ENV_CONFIG
+        . $SHARED_SECRET_PATH
         set +o allexport
 
         # Check for required variables
         REQUIRED_VARS=(DOMAIN)
         for VAR in "${REQUIRED_VARS[@]}"; do
             if [ -z "${!VAR}" ]; then
-                log_message "ERROR" "$VAR is not set in $ENV_CONFIG"
+                log_message "ERROR" "$VAR is not set in $SHARED_SECRET_PATH"
                 exit 1
             fi
         done
 
         log_message "INFO" "All required variables are set."
     else
-        log_message "ERROR" "No $ENV_CONFIG found."
+        log_message "ERROR" "No $SHARED_SECRET_PATH found."
         exit 1
     fi
 }
@@ -110,16 +112,28 @@ wait_for_api_gateway() {
 }
 
 create_secret() {
-    log_message "INFO" "Creating Docker secret 'app_config'..."
-    docker secret create app_config $ENV_CONFIG
+    if ! docker secret ls | grep -q "shared_secret"; then
+        log_message "INFO" "Creating Docker secret 'shared_secret'..."
+        docker secret create shared_secret $SHARED_SECRET_PATH
+    else
+        log_message "INFO" "Docker secret 'shared_secret' already exists."
+    fi
 
-    log_message "INFO" "Creating Docker secret 'mail_server_secret'..."
-    docker secret create mail_server_secret $MAIL_SERVER_SERVICE_SECRET
+    if ! docker secret ls | grep -q "mail_server_secret"; then
+        log_message "INFO" "Creating Docker secret 'mail_server_secret'..."
+        docker secret create mail_server_secret $MAIL_SERVER_SECRET_PATH
+    else
+        log_message "INFO" "Docker secret 'mail_server_secret' already exists."
+    fi
 }
 
 create_config() {
-    log_message "INFO" "Creating Docker config 'mail_server_config'..."
-    docker config create mail_server_config $MAIL_SERVER_SERVICE_SECRET
+    if ! docker config ls | grep -q "mail_server_config"; then
+        log_message "INFO" "Creating Docker config 'mail_server_config'..."
+        docker config create mail_server_config $MAIL_SERVER_CONFIG_PATH
+    else
+        log_message "INFO" "Docker config 'mail_server_config' already exists."
+    fi
 }
 
 log_message "INFO" "Starting apps..."
